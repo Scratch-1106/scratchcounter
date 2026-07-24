@@ -3,257 +3,154 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Scratch リアルタイムフォロワーカウント</title>
+  <title>Scratch Realtime Follower Count</title>
   <style>
-    /* Old Scratch 風デザイン（クラシックテーマ） */
     body {
-      font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
-      background-color: #e0e0e0;
-      color: #333;
-      margin: 0;
-      padding: 0;
-    }
-
-    header {
-      background-color: #4d97ff;
-      color: white;
-      padding: 12px 20px;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      font-family: monospace;
+      background-color: #222;
+      color: #fff;
       display: flex;
+      flex-direction: column;
       align-items: center;
-      justify-content: space-between;
-    }
-
-    header h1 {
+      justify-content: center;
+      height: 100vh;
       margin: 0;
-      font-size: 20px;
-      font-weight: bold;
     }
 
     .container {
-      max-width: 650px;
-      margin: 40px auto;
-      padding: 0 15px;
-    }
-
-    .search-card {
-      background: #ffffff;
-      border: 1px solid #d0d0d0;
-      border-radius: 8px;
-      padding: 20px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-      margin-bottom: 25px;
       text-align: center;
+      background: #333;
+      padding: 30px;
+      border-radius: 10px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.5);
     }
 
-    .search-box {
-      display: flex;
-      gap: 10px;
-      justify-content: center;
-      margin-top: 15px;
-    }
-
-    input[type="text"] {
-      padding: 10px 14px;
+    input {
+      padding: 10px;
       font-size: 16px;
-      border: 2px solid #ccc;
-      border-radius: 6px;
-      outline: none;
-      width: 60%;
-      transition: border-color 0.2s;
-    }
-
-    input[type="text"]:focus {
-      border-color: #4d97ff;
+      border: none;
+      border-radius: 5px;
+      margin-right: 10px;
     }
 
     button {
-      padding: 10px 20px;
+      padding: 10px 15px;
       font-size: 16px;
-      font-weight: bold;
-      background-color: #4d97ff;
-      color: white;
       border: none;
-      border-radius: 6px;
+      border-radius: 5px;
+      background-color: #4CAF50;
+      color: white;
       cursor: pointer;
-      transition: background-color 0.2s;
     }
 
     button:hover {
-      background-color: #3373cc;
+      background-color: #45a049;
     }
 
-    .counter-card {
-      background: #ffffff;
-      border: 2px solid #4d97ff;
-      border-radius: 12px;
-      padding: 30px 20px;
-      text-align: center;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.08);
-      display: none;
-    }
-
-    .user-info {
-      font-size: 22px;
+    .counter {
+      font-size: 80px;
       font-weight: bold;
-      color: #333;
-      margin-bottom: 15px;
+      color: #00ffcc;
+      margin-top: 20px;
     }
 
-    .count-display {
-      font-size: 64px;
-      font-weight: bold;
-      color: #ffab19;
-      text-shadow: 2px 2px 0px #e68a00;
-      font-family: 'Courier New', Courier, monospace;
-      letter-spacing: 2px;
-      margin: 10px 0;
-    }
-
-    .status-text {
-      font-size: 14px;
-      color: #777;
-    }
-
-    .error-msg {
-      color: #d9534f;
-      font-weight: bold;
-      margin-top: 10px;
-    }
-
-    footer {
-      text-align: center;
-      margin-top: 40px;
-      font-size: 12px;
-      color: #888;
+    .error {
+      color: #ff5555;
+      margin-top: 15px;
     }
   </style>
 </head>
 <body>
 
-  <header>
-    <h1>Scratch Follower Counter</h1>
-  </header>
-
   <div class="container">
-    <div class="search-card">
-      <label for="username-input" style="font-weight: bold;">Scratchユーザー名を入力:</label>
-      <div class="search-box">
-        <input type="text" id="username-input" placeholder="例: Scratch-1106" autocomplete="off">
-        <button id="search-btn">カウント開始</button>
-      </div>
-      <div id="error-display" class="error-msg"></div>
+    <h1>Scratch Follower Count</h1>
+    <div>
+      <input type="text" id="username" placeholder="Enter Scratch Username">
+      <button onclick="startCount()">Start</button>
     </div>
-
-    <div id="counter-card" class="counter-card">
-      <div id="user-info" class="user-info">--</div>
-      <div id="count-display" class="count-display">0</div>
-      <div class="status-text">リアルタイム更新中...</div>
-    </div>
-
-    <footer>
-      Powered by Cloudflare Workers & Pages
-    </footer>
+    
+    <div id="user-display" style="margin-top:20px; font-size:20px;"></div>
+    <div id="counter" class="counter">0</div>
+    <div id="error" class="error"></div>
   </div>
 
   <script>
-    // 先ほど確認した Worker の URL を設定済みです
+    // 確認した Worker の URL を設定済み
     const WORKER_URL = "https://scratchcounter.sukuiti.workers.dev";
 
-    let timerId = null;
+    let timer = null;
     let currentCount = 0;
 
-    const usernameInput = document.getElementById("username-input");
-    const searchBtn = document.getElementById("search-btn");
-    const counterCard = document.getElementById("counter-card");
-    const userInfo = document.getElementById("user-info");
-    const countDisplay = document.getElementById("count-display");
-    const errorDisplay = document.getElementById("error-display");
-
-    // URLハッシュからユーザー名を読み込む
-    window.addEventListener("load", () => {
-      const hashUsername = decodeURIComponent(location.hash.substring(1)).trim();
-      if (hashUsername) {
-        usernameInput.value = hashUsername;
-        startTracking(hashUsername);
+    // URLのハッシュ（#ユーザー名）から自動検索
+    window.addEventListener('load', () => {
+      const hash = decodeURIComponent(location.hash.substring(1)).trim();
+      if (hash) {
+        document.getElementById('username').value = hash;
+        startCount();
       }
     });
 
-    // 検索ボタンクリック時
-    searchBtn.addEventListener("click", () => {
-      const username = usernameInput.value.trim();
-      if (username) {
-        location.hash = encodeURIComponent(username);
-        startTracking(username);
-      }
-    });
+    function startCount() {
+      const username = document.getElementById('username').value.trim();
+      if (!username) return;
 
-    // Enterキー入力時
-    usernameInput.addEventListener("keypress", (e) => {
-      if (e.key === "Enter") {
-        searchBtn.click();
-      }
-    });
+      location.hash = encodeURIComponent(username);
+      document.getElementById('user-display').textContent = `@${username}`;
+      document.getElementById('error').textContent = '';
 
-    function startTracking(username) {
-      if (timerId) clearInterval(timerId);
-      
-      errorDisplay.textContent = "";
-      userInfo.textContent = `@${username} のフォロワー数`;
-      counterCard.style.display = "block";
+      if (timer) clearInterval(timer);
 
       // 初回取得
-      fetchFollowers(username);
+      updateCount(username);
 
-      // 3秒周期で更新取得
-      timerId = setInterval(() => {
-        fetchFollowers(username);
+      // 3秒ごとに更新
+      timer = setInterval(() => {
+        updateCount(username);
       }, 3000);
     }
 
-    async function fetchFollowers(username) {
+    async function updateCount(username) {
       try {
-        const response = await fetch(`${WORKER_URL}/?username=${encodeURIComponent(username)}`);
-        const data = await response.json();
+        const res = await fetch(`${WORKER_URL}/?username=${encodeURIComponent(username)}`);
+        const data = await res.json();
 
-        if (!response.ok) {
-          throw new Error(data.error || "データの取得に失敗しました");
+        if (!res.ok) {
+          throw new Error(data.error || 'エラーが発生しました');
         }
 
-        const newCount = data.followers;
-        animateCount(currentCount, newCount);
-        currentCount = newCount;
+        animateValue(currentCount, data.followers, 500);
+        currentCount = data.followers;
 
       } catch (err) {
-        errorDisplay.textContent = err.message;
+        document.getElementById('error').textContent = err.message;
       }
     }
 
-    // カウントアップアニメーション
-    function animateCount(start, end) {
+    // カウントの数字アニメーション
+    function animateValue(start, end, duration) {
       if (start === end) {
-        countDisplay.textContent = end.toLocaleString();
+        document.getElementById('counter').textContent = end.toLocaleString();
         return;
       }
 
-      const duration = 500; // アニメーション時間(ms)
-      const startTime = performance.now();
+      const range = end - start;
+      let startTime = null;
 
-      function update(currentTime) {
-        const elapsed = currentTime - startTime;
-        const progress = Math.min(elapsed / duration, 1);
-        const value = Math.floor(start + (end - start) * progress);
-
-        countDisplay.textContent = value.toLocaleString();
+      function step(timestamp) {
+        if (!startTime) startTime = timestamp;
+        const progress = Math.min((timestamp - startTime) / duration, 1);
+        const value = Math.floor(start + range * progress);
+        
+        document.getElementById('counter').textContent = value.toLocaleString();
 
         if (progress < 1) {
-          requestAnimationFrame(update);
+          requestAnimationFrame(step);
         } else {
-          countDisplay.textContent = end.toLocaleString();
+          document.getElementById('counter').textContent = end.toLocaleString();
         }
       }
 
-      requestAnimationFrame(update);
+      requestAnimationFrame(step);
     }
   </script>
 </body>
