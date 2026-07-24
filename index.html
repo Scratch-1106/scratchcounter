@@ -1,1 +1,259 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Scratch リアルタイムフォロワーカウンター</title>
+  <style>
+    /* 全体設定（真っ白な画面） */
+    body {
+      margin: 0;
+      padding: 0;
+      background-color: #ffffff;
+      font-family: 'Helvetica Neue', Arial, sans-serif;
+      color: #333333;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+    }
 
+    /* 昔のScratch風 青いヘッダー */
+    .scratch-header {
+      width: 100%;
+      background-color: #4d97ff; /* 伝統のScratchブルー */
+      height: 50px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 20px;
+      box-sizing: border-box;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+
+    .header-logo {
+      color: #ffffff;
+      font-weight: bold;
+      font-size: 20px;
+      letter-spacing: 1px;
+    }
+
+    .search-box {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .search-box input {
+      padding: 6px 12px;
+      border: 1px solid #3373cc;
+      border-radius: 4px;
+      outline: none;
+      font-size: 14px;
+    }
+
+    .search-box button {
+      padding: 6px 14px;
+      background-color: #ffab19; /* Scratchオレンジ */
+      color: white;
+      border: none;
+      border-radius: 4px;
+      font-weight: bold;
+      cursor: pointer;
+      font-size: 14px;
+    }
+
+    .search-box button:hover {
+      background-color: #e69500;
+    }
+
+    /* メインコンテンツ表示エリア */
+    .main-container {
+      margin-top: 60px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      width: 90%;
+      max-width: 600px;
+    }
+
+    /* アバターアイコン */
+    .user-avatar {
+      width: 120px;
+      height: 120px;
+      border-radius: 12px;
+      border: 3px solid #e0e0e0;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+      object-fit: cover;
+      margin-bottom: 12px;
+      display: none; /* 初期状態は非表示 */
+    }
+
+    /* ユーザー名 */
+    .username-display {
+      font-size: 28px;
+      font-weight: bold;
+      color: #2c3e50;
+      margin-bottom: 20px;
+      word-break: break-all;
+    }
+
+    /* ドデカフォロワー数 */
+    .follower-count {
+      font-size: 96px; /* 超超ドデカ文字 */
+      font-weight: 900;
+      color: #ffab19;
+      line-height: 1;
+      margin: 10px 0;
+      font-variant-numeric: tabular-nums;
+      transition: transform 0.2s ease;
+    }
+
+    /* ポンッと跳ねるアニメーション */
+    .follower-count.bump {
+      animation: pop 0.3s ease-out;
+    }
+
+    @keyframes pop {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.15); color: #4d97ff; }
+      100% { transform: scale(1); }
+    }
+
+    /* ステータス・メッセージ */
+    .status-text {
+      font-size: 14px;
+      color: #888888;
+      margin-top: 15px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- 青いヘッダー -->
+  <div class="scratch-header">
+    <div class="header-logo">Scratch Stats</div>
+    <div class="search-box">
+      <input type="text" id="searchInput" placeholder="ユーザー名を入力...">
+      <button onclick="searchUser()">検索</button>
+    </div>
+  </div>
+
+  <!-- メイン表示部分 -->
+  <div class="main-container">
+    <!-- APIで読み取ったアイコン -->
+    <img id="userAvatar" class="user-avatar" src="" alt="User Avatar">
+    
+    <!-- ユーザー名 -->
+    <div id="usernameDisplay" class="username-display">ユーザーを検索してください</div>
+    
+    <!-- 超ドデカ文字のリアルタイムフォロワー -->
+    <div id="followerCount" class="follower-count">---</div>
+
+    <!-- 状況表示 -->
+    <div id="statusText" class="status-text">ヘッダーからScratchのユーザー名を入力してね</div>
+  </div>
+
+  <script>
+    let timer = null;
+    let currentFollowers = null;
+
+    // ★あなたのWorker URLに書き換えてください！
+    const WORKER_URL = "https://scratch-api-proxy.〇〇.workers.dev";
+
+    // 検索ボタンを押したときの処理
+    function searchUser() {
+      const input = document.getElementById("searchInput").value.trim();
+      if (!input) return;
+      
+      // URLの末尾を #ユーザー名 に変更（ページリロードなし）
+      window.location.hash = input;
+    }
+
+    // URLのハッシュ（#griffpatch の部分）が変わった時に実行
+    async function handleHashChange() {
+      const username = decodeURIComponent(window.location.hash.substring(1)).trim();
+      
+      if (!username) return;
+
+      // 入力欄にも反映しておく
+      document.getElementById("searchInput").value = username;
+
+      // タイマーを一度クリア
+      if (timer) clearInterval(timer);
+      currentFollowers = null;
+
+      // ユーザーの存在確認とフォロワー取得を開始
+      await loadUserData(username);
+
+      // 10秒ごとにリアルタイム更新
+      timer = setInterval(() => loadUserData(username), 10000);
+    }
+
+    // データの取得と画面反映
+    async function loadUserData(username) {
+      const statusEl = document.getElementById("statusText");
+      const countEl = document.getElementById("followerCount");
+      const nameEl = document.getElementById("usernameDisplay");
+      const avatarEl = document.getElementById("userAvatar");
+
+      try {
+        const response = await fetch(`${WORKER_URL}?username=${username}`);
+        const data = await response.json();
+
+        if (response.ok) {
+          // 存在確認成功！
+
+          // アイコン画像の読み込み（Scratchの公式アバター画像URL）
+          // ※APIでユーザーIDが返らない場合も考慮し、グラバタAPI経由または直接指定
+          avatarEl.src = `https://uploads.scratch.mit.edu/users/avatars/${username}.png`;
+          // 画像読み込みエラー時はデフォルト画像にする
+          avatarEl.onerror = () => {
+            avatarEl.src = "https://scratch.mit.edu/static/images/default_avatar/avatar_90.png";
+          };
+          avatarEl.style.display = "block";
+
+          // ユーザー名表示
+          nameEl.textContent = username;
+
+          // フォロワー数の更新＆アニメーション
+          const newCount = data.followers;
+          if (currentFollowers !== null && currentFollowers !== newCount) {
+            countEl.classList.remove("bump");
+            void countEl.offsetWidth; // アニメーション再発火用
+            countEl.classList.add("bump");
+          }
+          currentFollowers = newCount;
+          countEl.textContent = newCount.toLocaleString();
+
+          statusEl.textContent = `リアルタイム更新中 (${new Date().toLocaleTimeString()})`;
+
+        } else {
+          // 存在しない、またはエラー
+          avatarEl.style.display = "none";
+          nameEl.textContent = "ユーザーが見つかりません";
+          countEl.textContent = "---";
+          statusEl.textContent = data.error || "存在しないユーザーです";
+        }
+      } catch (e) {
+        statusEl.textContent = "通信エラーが発生しました";
+      }
+    }
+
+    // ページが読み込まれた時 ＆ URLの # が変わった時に自動発火
+    window.addEventListener("hashchange", handleHashChange);
+    window.addEventListener("load", () => {
+      if (window.location.hash) {
+        handleHashChange();
+      }
+    });
+
+    // Enterキーでも検索できるようにする
+    document.getElementById("searchInput").addEventListener("keypress", (e) => {
+      if (e.key === "Enter") searchUser();
+    });
+  </script>
+
+</body>
+</html>
