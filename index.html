@@ -3,225 +3,258 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Scratch Realtime Follower Counter</title>
+  <title>Scratch リアルタイムフォロワーカウント</title>
   <style>
+    /* Old Scratch 風デザイン（クラシックテーマ） */
     body {
+      font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+      background-color: #e0e0e0;
+      color: #333;
       margin: 0;
       padding: 0;
-      background-color: #ffffff;
-      font-family: 'Helvetica Neue', Arial, sans-serif;
-      color: #333333;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      min-height: 100vh;
     }
 
-    .scratch-header {
-      width: 100%;
+    header {
       background-color: #4d97ff;
-      height: 50px;
+      color: white;
+      padding: 12px 20px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 0 20px;
-      box-sizing: border-box;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
     }
 
-    .header-logo {
-      color: #ffffff;
-      font-weight: bold;
+    header h1 {
+      margin: 0;
       font-size: 20px;
-      letter-spacing: 0.5px;
+      font-weight: bold;
+    }
+
+    .container {
+      max-width: 650px;
+      margin: 40px auto;
+      padding: 0 15px;
+    }
+
+    .search-card {
+      background: #ffffff;
+      border: 1px solid #d0d0d0;
+      border-radius: 8px;
+      padding: 20px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+      margin-bottom: 25px;
+      text-align: center;
     }
 
     .search-box {
       display: flex;
-      align-items: center;
-      gap: 6px;
+      gap: 10px;
+      justify-content: center;
+      margin-top: 15px;
     }
 
-    .search-box input {
-      padding: 6px 12px;
-      border: 1px solid #3373cc;
-      border-radius: 4px;
+    input[type="text"] {
+      padding: 10px 14px;
+      font-size: 16px;
+      border: 2px solid #ccc;
+      border-radius: 6px;
       outline: none;
-      font-size: 14px;
+      width: 60%;
+      transition: border-color 0.2s;
     }
 
-    .search-box button {
-      padding: 6px 14px;
-      background-color: #ffab19;
+    input[type="text"]:focus {
+      border-color: #4d97ff;
+    }
+
+    button {
+      padding: 10px 20px;
+      font-size: 16px;
+      font-weight: bold;
+      background-color: #4d97ff;
       color: white;
       border: none;
-      border-radius: 4px;
-      font-weight: bold;
+      border-radius: 6px;
       cursor: pointer;
-      font-size: 14px;
+      transition: background-color 0.2s;
     }
 
-    .search-box button:hover {
-      background-color: #e69500;
+    button:hover {
+      background-color: #3373cc;
     }
 
-    .main-container {
-      margin-top: 60px;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      text-align: center;
-      width: 90%;
-      max-width: 600px;
-    }
-
-    .user-avatar {
-      width: 120px;
-      height: 120px;
+    .counter-card {
+      background: #ffffff;
+      border: 2px solid #4d97ff;
       border-radius: 12px;
-      border: 3px solid #e0e0e0;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.05);
-      object-fit: cover;
-      margin-bottom: 12px;
+      padding: 30px 20px;
+      text-align: center;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.08);
       display: none;
     }
 
-    .username-display {
-      font-size: 28px;
+    .user-info {
+      font-size: 22px;
       font-weight: bold;
-      color: #2c3e50;
-      margin-bottom: 20px;
-      word-break: break-all;
+      color: #333;
+      margin-bottom: 15px;
     }
 
-    .follower-count {
-      font-size: 96px;
-      font-weight: 900;
+    .count-display {
+      font-size: 64px;
+      font-weight: bold;
       color: #ffab19;
-      line-height: 1;
+      text-shadow: 2px 2px 0px #e68a00;
+      font-family: 'Courier New', Courier, monospace;
+      letter-spacing: 2px;
       margin: 10px 0;
-      font-variant-numeric: tabular-nums;
-      transition: transform 0.2s ease;
-    }
-
-    .follower-count.bump {
-      animation: pop 0.3s ease-out;
-    }
-
-    @keyframes pop {
-      0% { transform: scale(1); }
-      50% { transform: scale(1.15); color: #4d97ff; }
-      100% { transform: scale(1); }
     }
 
     .status-text {
       font-size: 14px;
-      color: #888888;
-      margin-top: 15px;
+      color: #777;
+    }
+
+    .error-msg {
+      color: #d9534f;
+      font-weight: bold;
+      margin-top: 10px;
+    }
+
+    footer {
+      text-align: center;
+      margin-top: 40px;
+      font-size: 12px;
+      color: #888;
     }
   </style>
 </head>
 <body>
 
-  <div class="scratch-header">
-    <div class="header-logo">Scratch counter</div>
-    <div class="search-box">
-      <input type="text" id="searchInput" placeholder="ユーザー名を入力...">
-      <button onclick="searchUser()">検索</button>
-    </div>
-  </div>
+  <header>
+    <h1>Scratch Follower Counter</h1>
+  </header>
 
-  <div class="main-container">
-    <img id="userAvatar" class="user-avatar" src="" alt="User Avatar">
-    <div id="usernameDisplay" class="username-display">ユーザーを検索してください</div>
-    <div id="followerCount" class="follower-count">---</div>
-    <div id="statusText" class="status-text">上の検索欄からScratchのユーザー名を入力してね</div>
+  <div class="container">
+    <div class="search-card">
+      <label for="username-input" style="font-weight: bold;">Scratchユーザー名を入力:</label>
+      <div class="search-box">
+        <input type="text" id="username-input" placeholder="例: Scratch-1106" autocomplete="off">
+        <button id="search-btn">カウント開始</button>
+      </div>
+      <div id="error-display" class="error-msg"></div>
+    </div>
+
+    <div id="counter-card" class="counter-card">
+      <div id="user-info" class="user-info">--</div>
+      <div id="count-display" class="count-display">0</div>
+      <div class="status-text">リアルタイム更新中...</div>
+    </div>
+
+    <footer>
+      Powered by Cloudflare Workers & Pages
+    </footer>
   </div>
 
   <script>
-    let timer = null;
-    let currentFollowers = null;
-
-    // ★ここにWorkerのURLを貼り付けます！
+    // 先ほど確認した Worker の URL を設定済みです
     const WORKER_URL = "https://scratchcounter.sukuiti.workers.dev";
 
-    function searchUser() {
-      const input = document.getElementById("searchInput").value.trim();
-      if (!input) return;
-      window.location.hash = input;
+    let timerId = null;
+    let currentCount = 0;
+
+    const usernameInput = document.getElementById("username-input");
+    const searchBtn = document.getElementById("search-btn");
+    const counterCard = document.getElementById("counter-card");
+    const userInfo = document.getElementById("user-info");
+    const countDisplay = document.getElementById("count-display");
+    const errorDisplay = document.getElementById("error-display");
+
+    // URLハッシュからユーザー名を読み込む
+    window.addEventListener("load", () => {
+      const hashUsername = decodeURIComponent(location.hash.substring(1)).trim();
+      if (hashUsername) {
+        usernameInput.value = hashUsername;
+        startTracking(hashUsername);
+      }
+    });
+
+    // 検索ボタンクリック時
+    searchBtn.addEventListener("click", () => {
+      const username = usernameInput.value.trim();
+      if (username) {
+        location.hash = encodeURIComponent(username);
+        startTracking(username);
+      }
+    });
+
+    // Enterキー入力時
+    usernameInput.addEventListener("keypress", (e) => {
+      if (e.key === "Enter") {
+        searchBtn.click();
+      }
+    });
+
+    function startTracking(username) {
+      if (timerId) clearInterval(timerId);
+      
+      errorDisplay.textContent = "";
+      userInfo.textContent = `@${username} のフォロワー数`;
+      counterCard.style.display = "block";
+
+      // 初回取得
+      fetchFollowers(username);
+
+      // 3秒周期で更新取得
+      timerId = setInterval(() => {
+        fetchFollowers(username);
+      }, 3000);
     }
 
-    async function handleHashChange() {
-      const username = decodeURIComponent(window.location.hash.substring(1)).trim();
-      if (!username) return;
+    async function fetchFollowers(username) {
+      try {
+        const response = await fetch(`${WORKER_URL}/?username=${encodeURIComponent(username)}`);
+        const data = await response.json();
 
-      document.getElementById("searchInput").value = username;
+        if (!response.ok) {
+          throw new Error(data.error || "データの取得に失敗しました");
+        }
 
-      if (timer) clearInterval(timer);
-      currentFollowers = null;
+        const newCount = data.followers;
+        animateCount(currentCount, newCount);
+        currentCount = newCount;
 
-      await loadUserData(username);
-      timer = setInterval(() => loadUserData(username), 10000);
+      } catch (err) {
+        errorDisplay.textContent = err.message;
+      }
     }
 
-    async function loadUserData(username) {
-      const statusEl = document.getElementById("statusText");
-      const countEl = document.getElementById("followerCount");
-      const nameEl = document.getElementById("usernameDisplay");
-      const avatarEl = document.getElementById("userAvatar");
-
-      if (WORKER_URL.includes("YOUR-WORKER-NAME")) {
-        statusEl.textContent = "WORKER_URLが設定されていません。index.htmlを確認してください。";
+    // カウントアップアニメーション
+    function animateCount(start, end) {
+      if (start === end) {
+        countDisplay.textContent = end.toLocaleString();
         return;
       }
 
-      statusEl.textContent = "読み込み中...";
+      const duration = 500; // アニメーション時間(ms)
+      const startTime = performance.now();
 
-      try {
-        const response = await fetch(`${WORKER_URL}?username=${encodeURIComponent(username)}`);
-        const data = await response.json();
+      function update(currentTime) {
+        const elapsed = currentTime - startTime;
+        const progress = Math.min(elapsed / duration, 1);
+        const value = Math.floor(start + (end - start) * progress);
 
-        if (response.ok) {
-          avatarEl.src = `https://uploads.scratch.mit.edu/users/avatars/${username}.png`;
-          avatarEl.onerror = () => {
-            avatarEl.src = "https://scratch.mit.edu/static/images/default_avatar/avatar_90.png";
-          };
-          avatarEl.style.display = "block";
+        countDisplay.textContent = value.toLocaleString();
 
-          nameEl.textContent = username;
-
-          const newCount = data.followers;
-          if (currentFollowers !== null && currentFollowers !== newCount) {
-            countEl.classList.remove("bump");
-            void countEl.offsetWidth;
-            countEl.classList.add("bump");
-          }
-          currentFollowers = newCount;
-          countEl.textContent = newCount.toLocaleString();
-
-          statusEl.textContent = `リアルタイム更新中 (${new Date().toLocaleTimeString()})`;
+        if (progress < 1) {
+          requestAnimationFrame(update);
         } else {
-          avatarEl.style.display = "none";
-          nameEl.textContent = "ユーザーが見つかりません";
-          countEl.textContent = "---";
-          statusEl.textContent = data.error || "存在しないユーザーです";
+          countDisplay.textContent = end.toLocaleString();
         }
-      } catch (e) {
-        statusEl.textContent = "通信エラーが発生しました（WorkerのURLを確認してください）";
       }
+
+      requestAnimationFrame(update);
     }
-
-    window.addEventListener("hashchange", handleHashChange);
-    window.addEventListener("load", () => {
-      if (window.location.hash) {
-        handleHashChange();
-      }
-    });
-
-    document.getElementById("searchInput").addEventListener("keypress", (e) => {
-      if (e.key === "Enter") searchUser();
-    });
   </script>
-
 </body>
 </html>
